@@ -1,12 +1,27 @@
 cmake_minimum_required(VERSION 3.10)
-project(tasks_4_plus LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_executable(task4_mixins 4_mixins.cpp)
-add_executable(task5_singleton_log 5_singleton_log.cpp)
-add_executable(task6_builder_checkpoints 6_builder_checkpoints.cpp)
-add_executable(task7_bridge_set 7_bridge_set.cpp)
-add_executable(task8_expression_composite_flyweight 8_expression_composite_flyweight.cpp)
+project(PC)
+
+set(SOURCES
+  ${CMAKE_SOURCE_DIR}/main.cpp
+  ${CMAKE_SOURCE_DIR}/crop_box_filter/crop_box_filter.cpp
+  ${CMAKE_SOURCE_DIR}/blockage_diag/blockage_diag.cpp
+)
+
+set(HEADERS
+  ${CMAKE_SOURCE_DIR}/PointCloud.h
+  ${CMAKE_SOURCE_DIR}/filter.hpp
+  ${CMAKE_SOURCE_DIR}/logging.hpp
+  ${CMAKE_SOURCE_DIR}/point_accessor.hpp
+  ${CMAKE_SOURCE_DIR}/Logger.h
+  ${CMAKE_SOURCE_DIR}/crop_box_filter/crop_box_filter.hpp
+  ${CMAKE_SOURCE_DIR}/blockage_diag/blockage_diag.hpp
+)
+
+add_executable(PC
+  ${SOURCES}
+  ${HEADERS}
+)

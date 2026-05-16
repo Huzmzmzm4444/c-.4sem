@@ -1,50 +1,72 @@
 #include "PointCloud.h"
-#include "crop_box_filter.hpp"
+#include "crop_box_filter/crop_box_filter.hpp"
+#include "logging.hpp"
+#include "point_accessor.hpp"
 
 #include <iostream>
 #include <memory>
 #include <ostream>
+#include <string>
 
-std::ostream & operator<<(std::ostream & stream, const PointCloud & pc)
+std::ostream & operator<<(std::ostream & os, const PointCloud & pc)
 {
-  stream << "Point cloud (" << pc.pointcloud_type_ << "):\n";
-  for (std::size_t i = 0; i < pc.size_; ++i) {
-    const std::size_t offset = i * pc.point_size_;
-    for (std::size_t j = 0; j < pc.point_size_; ++j) {
-      stream << pc.points_[offset + j] << ' ';
+    os << "Point cloud (" << pc.pointcloud_type_ << "):" << std::endl;
+    for (std::size_t i = 0; i < pc.size_; ++i) {
+        for (std::size_t j = 0; j < pc.point_size_; ++j) {
+            os << pc.points_[i * pc.point_size_ + j] << " ";
+        }
+        os << std::endl;
     }
-    stream << '\n';
-  }
-  return stream;
+    return os;
 }
 
 int main()
 {
-  try {
-    PointCloud pc_xyzir;
-    FillPointCloud(
-      &pc_xyzir, 3, "XYZIR",
-      {5.0, 1.2, 2.1, 0.5, 1.0, -3.2, 0.2, 1.1, 0.7, 1.0, 2.2, 2.1, 7.0, 0.1, 2.0});
+    try {
+        PointCloud pc_xyzir;
+        FillPointCloud(
+            pc_xyzir,
+            5,
+            "XYZIR",
+            {
+                5.0, 1.2, 2.1, 0.5, 1.0,
+                -3.2, 0.2, 1.1, 0.7, 1.0,
+                2.2, 2.1, 7.0, 0.1, 2.0,
+            });
 
-    std::cout << "We have:\n" << pc_xyzir << '\n';
+        std::cout << "We have:" << std::endl;
+        std::cout << pc_xyzir << std::endl;
 
-    std::unique_ptr<pointcloud_preprocessor::Filter> filter =
-      std::make_unique<pointcloud_preprocessor::CropBoxFilter>();
-    filter->SetParams(pointcloud_preprocessor::FilterParametr(
-      {{"min_x", -4.0},
-       {"max_x", -2.0},
-       {"min_y", 0.1},
-       {"max_y", 2.0},
-       {"min_z", 0.5},
-       {"max_z", 3.0},
-       {"negative", 0.0}}));
+        auto logger = std::make_shared<pointcloud_preprocessor::FilterLogger>("CropBoxFilter");
+        auto accessor = std::make_shared<pointcloud_preprocessor::XYZPointCloudAccessor>();
 
-    const std::unique_ptr<PointCloud> out(filter->Apply(&pc_xyzir));
-    std::cout << "after CBF:\n" << *out << '\n';
-  } catch (const std::exception & e) {
-    std::cerr << e.what() << '\n';
-    return 1;
-  }
+        pointcloud_preprocessor::CropBoxParam param;
+        param.min_x = -4.0;
+        param.max_x = -2.0;
+        param.min_y = 0.1;
+        param.max_y = 2.0;
+        param.min_z = 0.5;
+        param.max_z = 3.0;
+        param.negative = false;
 
-  return 0;
+        std::unique_ptr<pointcloud_preprocessor::Filter> cbf =
+            std::make_unique<pointcloud_preprocessor::CropBoxFilter>(logger, accessor, param);
+
+        std::unique_ptr<PointCloud> out = cbf->Apply(pc_xyzir);
+        std::cout << "after CBF:" << std::endl;
+        std::cout << *out << std::endl;
+        return 0;
+    } catch (const pointcloud_preprocessor::FilterConfigurationError & error) {
+        std::cerr << "Configuration error: " << error.what() << std::endl;
+        return 2;
+    } catch (const pointcloud_preprocessor::FilterExecutionError & error) {
+        std::cerr << "Execution error: " << error.what() << std::endl;
+        return 3;
+    } catch (const PointCloudError & error) {
+        std::cerr << "PointCloud error: " << error.what() << std::endl;
+        return 4;
+    } catch (const std::exception & error) {
+        std::cerr << "Unhandled error: " << error.what() << std::endl;
+        return 1;
+    }
 }
